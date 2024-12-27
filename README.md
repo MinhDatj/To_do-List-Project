@@ -7,6 +7,9 @@ This program allows the user to:
     - Set date for each task
     - Set the status of each task
 
+About task:
+    - Each task will have a format like this: <start_date>-<end_date> <task> <status> 
+
 Guidance for every .sh files:
     - clone.sh clones any github source. Place to source next to the command. Eg: ./clone.sh <source_git>
     - compile.sh compiles the to_do_list program
