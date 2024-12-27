@@ -5,7 +5,7 @@
 
 int DaysOfMonth(int v) {
 	switch(v) {
-		case 2: v & 3 ? return 29 : return 28;
+		case 2: return v & 3 ? 29 : 28;
 		case 4: case 6: case 9: case 11: return 30;
 		return 31;
 	}
@@ -51,7 +51,7 @@ int main() {
 		switch (option) {
 			case 0:
 				printf("Exiting.\n");
-				
+
 				return 0;
 		}
 	}
