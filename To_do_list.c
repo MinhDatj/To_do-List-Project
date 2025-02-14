@@ -7,10 +7,14 @@
 	#include <fcntl.h>
 #endif
 
-#define B_SET "\e[1;1m"
-#define B_RED "\e[1;31m"
-#define SET "\e[0;0m"
-#define RED "\e[0;31m"
+#define B_BLUE   "\033[1;34m"
+#define B_CYAN   "\033[1;36m"
+#define B_ORANGE "\033[38;5;214m"
+#define GRN		 "\033[92m"
+#define RED		 "\033[91m"
+#define BR_WHITE "\033[97m"
+#define SET      "\033[0m"
+#define VER_LINE "\033[1;36m|\033[0m" 
 
 FILE* fptr;
 const char* file = "./TodoList.txt";
@@ -221,7 +225,58 @@ Task* mergeList(Task** head, int choice) {
 }
 
 void printDate(Date date) {
-	printf("%02d/%02d/%04d", date.d, date.m, date.y);
+	printf(B_BLUE"%02d/%02d/%04d", date.d, date.m, date.y);
+}
+
+void splitText(const char* text, int maxLen, int index, int status, int priority, Date start, Date due) {
+    int len = strlen(text);
+    int ptr = 0;
+    int first_line = 1;
+    
+    while (ptr < len) {
+        if (len - ptr <= maxLen) {
+            printf(B_CYAN "| %3s | %6s | " BR_WHITE "%-39s" SET " " B_CYAN "| %-8s | %-10s |  %-8s  |\n", " ", " ", text + ptr, "", "", "");
+            printf(SET);
+            break;
+        }
+
+        int cutPos = ptr + maxLen;
+
+        while (cutPos > ptr && text[cutPos] != ' ') {
+            cutPos--;
+        }
+
+        if (cutPos == ptr) {
+            cutPos = ptr + maxLen;
+        }
+		
+		if (first_line) {
+			first_line = 0;	
+			
+			printf("\033[1;36m|\033[0m" BR_WHITE" %-3d "SET "\033[1;36m|\033[0m %-2s", index, "");
+			#ifdef _WIN32
+				_setmode(_fileno(stdout), _O_U16TEXT);
+				wprintf((status) ? GRN L"\x2713" SET : RED L"\x2715" SET);
+				_setmode(_fileno(stdout), _O_TEXT);
+			#else
+				printf(status ? "\xE2\x9C\x93" : "\xE2\x9C\x95");
+			#endif
+			printf(B_CYAN"%-3s |" "\033[97m  %.*s  ", "", cutPos - ptr, text + ptr);
+			printf("\033[1;36m|\033[0m \033[38;5;214m%4s%-4d \033[1;36m|\033[0m ", "", priority);
+			printDate(start);
+			printf(" \033[1;36m|\033[0m ");
+			printDate(due);
+			printf(" \033[1;36m|\033[0m\n");
+		} 
+		else {
+        	printf(B_CYAN"| %3s | %6s | ", " ", " ");
+        	printf(BR_WHITE "%.*s   ", cutPos - ptr, text + ptr);
+        	printf(B_CYAN" | %-8s | %-10s |  %-8s  |\033[0m\n", "", "", "");
+		}
+
+        ptr = cutPos;
+        while (text[ptr] == ' ') ptr++; 
+    }
 }
 
 void displayTaskss(Task* head, int choice) {
@@ -237,31 +292,36 @@ void displayTaskss(Task* head, int choice) {
 	int index = 1;
 	Task* curr = head;
 
-	printf("===============================================================================================\n");
-	printf(B_RED"| %-3s | %-6s | %-8s | %-10s | %-10s | %-40s \n", "STT", "Status", "Priority", "Start-Date", " Due-Date ", "                 Detail"SET);
-	printf("-----------------------------------------------------------------------------------------------\n");
-
+	printf(B_CYAN"===============================================================================================\n");
+	printf("| %-3s | %-6s | %16s%-35s | %-8s | %-10s |  %-8s  |\n", 
+		BR_WHITE"STT"B_CYAN, GRN"Status"B_CYAN, "", BR_WHITE"Detail" B_CYAN, B_ORANGE"Priority"B_CYAN, B_BLUE"Start-Date"B_CYAN, B_BLUE"Due-Date"B_CYAN);
+	printf(B_CYAN"-----------------------------------------------------------------------------------------------\n"SET);
+	
 	while (curr) {
-		printf("| %-3d | %-3s", index, "");
-		#ifdef _WIN32
-			_setmode(_fileno(stdout), _O_U16TEXT);
-			wprintf((curr->status) ? L"\x2713" : L"_");
-			_setmode(_fileno(stdout), _O_TEXT);
-		#else
-			printf((curr->status) ? "\xE2\x9C\x93" : "_");
-		#endif
-		printf("%-2s ", "");
-		printf("| %4s%-4d | ", "", curr->priority);
-		printDate(curr->start);
-		printf(" | ");
-		printDate(curr->due);
-		printf(" | ");
-		printf("%s\n", curr->detail);
-
+		if (strlen(curr->detail) < 40) {
+			printf("\033[1;36m|\033[0m" "\033[97m %-3d "SET "\033[1;36m|\033[0m %-2s", index, "");
+			#ifdef _WIN32
+				_setmode(_fileno(stdout), _O_U16TEXT);
+				wprintf((status) ? GRN L"\x2713" SET : RED L"\x2715" SET);
+				_setmode(_fileno(stdout), _O_TEXT);
+			#else
+				printf((curr->status) ? "\xE2\x9C\x93" : "\xE2\x9C\x95");
+			#endif
+			printf("%-3s "VER_LINE, "");
+			printf(BR_WHITE"  %-38s ", curr->detail);;
+			printf("\033[1;36m|\033[0m %4s\033[38;5;214m%-4d \033[1;36m|\033[0m ", "",curr->priority);
+			printDate(curr->start);
+			printf(" \033[1;36m|\033[0m ");
+			printDate(curr->due);
+			printf(" \033[1;36m|\033[0m\n");
+		}
+		else splitText(curr->detail, 40, index, curr->status, curr->priority, curr->start, curr->due);
+		
+		if (!curr->next) printf(B_CYAN"===============================================================================================\n"SET);
+		else printf(B_CYAN"+-----+--------+-----------------------------------------+----------+------------+------------+\n"SET);
 		curr = curr->next;
 		index++;
 	}
-	printf("===============================================================================================\n");
 }
 
 void freeTasks(Task* head) {
@@ -307,7 +367,6 @@ int loadTasksFromFile(Task** head, const char* file_name) {
 	char detail[150];
 	char line[50];
 	char statusChar[9];
-	int tskCount = 0;
 	
 	while (fscanf(fptr, "Task: %[^\n]%*c", detail) == 1) {
 		
@@ -324,11 +383,11 @@ int loadTasksFromFile(Task** head, const char* file_name) {
 		
 		new_task->next = *head;
 		*head = new_task;
-		tskCount++;
+		listLen++;
 	}
 	
 	fclose(fptr);
-	return tskCount;
+	return listLen;
 }
 
 int testing() {
@@ -379,7 +438,7 @@ int testing() {
 				scanf("%d%*c%d%*c%d", due.d, due.m, due.y);*/
 				//Cach 2
 				printf("Please enter your task following this form:\n");
-				printf("\tYour Task, Task's_priority(1->5), Start-day(dd/mm/yyyy), Due-day(dd/mm/yyyy)\n");
+				printf("\tTask1, 1->5(Priority), dd/mm/yyyy(Start_day), dd/mm/yyyy(Due_day)\n");
 				scanf("%[^\n]%*c", all);
 				if (sscanf(all, "%[^,], %d, %d/%d/%d, %d/%d/%d", task, &priority, &start.d, &start.m, &start.y, &due.d, &due.m, &due.y) == 8) {
 					temp = newTask(task, priority, 0, start, due);
