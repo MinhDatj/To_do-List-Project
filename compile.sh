@@ -1,6 +1,6 @@
 #!/bin/bash
 
-gcc To_do_list.c -o TodoList.exe
+gcc To_do_list.c -o TodoList
 
 if [ $? -eq 0 ]; then
     echo "Compilation completed!"
