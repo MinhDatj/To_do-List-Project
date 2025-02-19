@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./TodoList.exe
+./TodoList
