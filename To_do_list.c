@@ -19,15 +19,15 @@
 FILE* fptr;
 const char* file = "./TodoList.txt";
 
-int DaysOfMonth(int v) {
-	switch(v) {
-		case 2: return v & 3 ? 29 : 28;
+int DaysOfMonth(int m, int y) {
+	switch(m) {
+		case 2: return y & 3 ? 29 : 28;
 		case 4: case 6: case 9: case 11: return 30;
 		return 31;
 	}
 }
 
-int limt(int min, int max, int v) {
+int limit(int min, int max, int v) {
 	if (v < min) return min;
 	if (v > max) return max;
 	return v;
@@ -101,6 +101,28 @@ void deleteTask(Task** head, int k) {
 	listLen--;
 }
 
+void editTask(Task* head, int key, int listLength, const char* new_detail, int new_priority, int new_status, Date new_start, Date new_due) {
+    if (!head) {
+        printf("List is empty!\n");
+    }
+
+    if (key < 1 || key > listLength) {
+        printf("Number out of range in the list. Please type again!\n");
+        return;
+    }
+
+    Task* curr = head;
+    while (key-- != 1) curr = curr->next;
+    if (!curr) return;
+
+    strcpy(curr->detail, new_detail);
+    curr->priority = new_priority;
+    curr->status = new_status;
+    curr->start = new_start;
+    curr->due = new_due;
+    printf("Edited task successfully!\n");
+}
+
 void changeStatus(Task* head, int k) {
 	if (!head) {
 		printf("List is empty!\n");
@@ -115,7 +137,7 @@ void changeStatus(Task* head, int k) {
 	while (k-- != 1) {
 		curr = curr->next;
 	}
-	if (curr) curr->status = ~(curr->status);
+	if (curr) curr->status = !(curr->status);
 	printf("Changing status succeed!\n");
 }
 
@@ -261,7 +283,7 @@ void splitText(const char* text, int maxLen, int index, int status, int priority
 			#else
 				printf(status ? "\xE2\x9C\x93" : "\xE2\x9C\x95");
 			#endif
-			printf(B_CYAN"%-3s |" "\033[97m  %.*s  ", "", cutPos - ptr, text + ptr);
+			printf(B_CYAN"%-3s |" "\033[97m  %-37.*s  ", "", cutPos - ptr, text + ptr);
 			printf("\033[1;36m|\033[0m \033[38;5;214m%4s%-4d \033[1;36m|\033[0m ", "", priority);
 			printDate(start);
 			printf(" \033[1;36m|\033[0m ");
@@ -270,8 +292,8 @@ void splitText(const char* text, int maxLen, int index, int status, int priority
 		} 
 		else {
         	printf(B_CYAN"| %3s | %6s | ", " ", " ");
-        	printf(BR_WHITE "%.*s   ", cutPos - ptr, text + ptr);
-        	printf(B_CYAN" | %-8s | %-10s |  %-8s  |\033[0m\n", "", "", "");
+        	printf(BR_WHITE "%-38.*s", cutPos - ptr, text + ptr);
+        	printf(B_CYAN"| %-8s | %-10s |  %-8s  |\033[0m\n", "", "", "");
 		}
 
         ptr = cutPos;
@@ -308,7 +330,8 @@ void displayTaskss(Task* head, int choice) {
 				printf((curr->status) ? "\xE2\x9C\x93" : "\xE2\x9C\x95");
 			#endif
 			printf("%-3s "VER_LINE, "");
-			printf(BR_WHITE"  %-38s ", curr->detail);;
+			if (strlen(curr->detail) == 39) printf(BR_WHITE"  %-38s", curr->detail);
+			else printf(BR_WHITE"  %-38s ", curr->detail);
 			printf("\033[1;36m|\033[0m %4s\033[38;5;214m%-4d \033[1;36m|\033[0m ", "",curr->priority);
 			printDate(curr->start);
 			printf(" \033[1;36m|\033[0m ");
@@ -334,15 +357,16 @@ void freeTasks(Task* head) {
 
 void saveTaskToFile(Task* task, const char* file_name) {
 	fptr = fopen(file_name, "a");
-	if (!file) {
+	if (!fptr) {
 		printf("Cannot open file!\n");
 		return;
 	}
 	
 	fprintf(fptr, "Task: %s\n", task->detail);
-	fprintf(fptr, "Status: %s", (task->status) ? "Done" : "Not_Done");
-	fprintf(fptr, "\tPriority: %d\tStart->Due_Date: %02d/%02d/%04d -> %02d/%02d/%04d\n", task->priority, task->start.d, task->start.m, task->start.y, task->due.d, task->due.m, task->due.y);
-	fclose(fptr);
+	fprintf(fptr, "\tStatus: %-10s", (task->status) ? "Done" : "Not_Done");
+	fprintf(fptr, "Priority: %-5dStart->Due: %02d/%02d/%04d -> %02d/%02d/%04d\n", 
+		task->priority, task->start.d, task->start.m, task->start.y, task->due.d, task->due.m, task->due.y);
+	task = task->next;	fclose(fptr);
 }
 
 void resaveToFile(Task* head, const char* file_name) {
@@ -351,8 +375,9 @@ void resaveToFile(Task* head, const char* file_name) {
 	Task* task = head;
 	while (task != NULL) {
 		fprintf(fptr, "Task: %s\n", task->detail);
-		fprintf(fptr, "Status: %s", (task->status) ? "Done" : "Not_Done");
-		fprintf(fptr, "\tPriority: %d\tStart->Due_Date: %02d/%02d/%04d -> %02d/%02d/%04d\n", task->priority, task->start.d, task->start.m, task->start.y, task->due.d, task->due.m, task->due.y);
+        fprintf(fptr, "\tStatus: %-10s", (task->status) ? "Done" : "Not_Done");
+        fprintf(fptr, "Priority: %-5dStart->Due: %02d/%02d/%04d -> %02d/%02d/%04d\n", 
+            task->priority, task->start.d, task->start.m, task->start.y, task->due.d, task->due.m, task->due.y);
 		task = task->next;
 	}
 	fclose(fptr);
@@ -374,7 +399,7 @@ int loadTasksFromFile(Task** head, const char* file_name) {
 		strcpy(new_task->detail, detail);
 		
 		if (fscanf(fptr, "%[^\n]%*c", line) == 1) {
-			sscanf(line, "Status: %8s\tPriority: %d\tStart->Due_Date: %d/%d/%d -> %d/%d/%d", statusChar, &(new_task->priority), &(new_task->start.d), &new_task->start.m, &new_task->start.y, &new_task->due.d, &new_task->due.m, &new_task->due.y);
+			sscanf(line, " Status: %10s Priority: %d Start->Due: %2d/%2d/%4d -> %2d/%2d/%4d%*c", statusChar, &(new_task->priority), &(new_task->start.d), &new_task->start.m, &new_task->start.y, &new_task->due.d, &new_task->due.m, &new_task->due.y);
 			new_task->status = (strcmp(statusChar, "Done") == 0) ? 1 : 0;
 		} else {
 			free(new_task);
@@ -403,13 +428,15 @@ int testing() {
 	if(!loadTasksFromFile(&head, file)) printf("There are no tasks yet!\n");
 	
 	printf("\n********* Main menu *********");
-	printf("\n\tPress 1 to add a task");
-	printf("\n\tPress 2 to delete a task");
-	printf("\n\tPress 3 to change status of a task");
-	printf("\n\tPress 4 to display all tasks by priority");
-	printf("\n\tPress 5 to display all tasks by due date");
-	printf("\n\tPress 6 to display all tasks by status");
-	printf("\n\tPress 0 to exit");
+	printf("\n\tPress:");
+	printf("\n\t1. Add a task");
+	printf("\n\t2. Delete a task");
+	printf("\n\t3. Edit a task");
+	printf("\n\t4. Change status of a task");
+	printf("\n\t5. Display tasks by priority");
+	printf("\n\t6. Display tasks by due date");
+	printf("\n\t7. Display tasks by status");
+	printf("\n\t0. Exit program");
 	
 	while (1) {
 		printf("\nEnter your choice: ");
@@ -427,51 +454,77 @@ int testing() {
 			
 			case 1:
 				//Cach 1 
-				/*printf("Please enter:\n");
-				printf("%3s", "Your task: ");
+				printf("Please enter:\n");
+				printf("\tYour task: ");
 				scanf("%[^\n]%*c", task);
-				printf("%3s", "Task's priority (1->5): ");
-				scanf("%d", &priority);
-				printf("%3s", "Start day (dd/mm/yyyy): ");
-				scanf("%d%*c%d%*c%d", start.d, start.m, start.y);
-				printf("%3s", "Due day (dd/mm/yyyy): ");
-				scanf("%d%*c%d%*c%d", due.d, due.m, due.y);*/
+				printf("\tPriority(1->5): ");
+				scanf("%d", &priority);	if (priority < 1 || priority > 5) printf("\t\tWrong range of number, please remember to edit later!\n");
+				printf("\tStart_date(dd/mm/yyyy): ");
+				scanf("%d/%d/%d", &start.d, &start.m, &start.y);
+				printf("\tDue_date(dd/mm/yyyy): ");
+				scanf("%d/%d/%d", &due.d, &due.m, &due.y);
+				temp = newTask(task, priority, 0, start, due);
+				addTask(&head, temp);
+				saveTaskToFile(temp, file);
 				//Cach 2
-				printf("Please enter your task following this form:\n");
+				/*printf("Please enter your task following this form:\n");
 				printf("\tTask1, 1->5(Priority), dd/mm/yyyy(Start_day), dd/mm/yyyy(Due_day)\n");
 				scanf("%[^\n]%*c", all);
 				if (sscanf(all, "%[^,], %d, %d/%d/%d, %d/%d/%d", task, &priority, &start.d, &start.m, &start.y, &due.d, &due.m, &due.y) == 8) {
+					priority = limit(1, 5, priority);
+					start.m = limit(1, 12, start.m);
+					start.d = limit(1, DaysOfMonth(start.m, start.y), start.d);
+					due.m = limit(1, 12, due.m);
+					due.d = limit(1, DaysOfMonth(due.m, due.y), due.d);
 					temp = newTask(task, priority, 0, start, due);
 					addTask(&head, temp);
 					saveTaskToFile(temp, file);
-				} else printf("Wrong format, please type again!\n");
+				} else printf("Wrong format, please type again!\n");*/
 				break;
 				
 			case 2:
-				printf("Enter the number of that task: ");
+				printf("Please enter the number of that task: ");
 				scanf("%d", &choice);
 				deleteTask(&head, choice);
 				resaveToFile(head, file);
 				break;
 				
 			case 3:
-				printf("Enter STT of the task to change status: ");
+				printf("Please enter the number of that task: ");
+				scanf("%d%*c", &choice);
+				printf("Please enter:\n");
+				printf("\tYour task: ");
+				if (scanf("%[^\n]%*c", task) != 1) { printf("Please do it again!\n"); break; }
+				printf("\tPriority(1->5): ");
+				if (scanf("%d", &priority) != 1) { printf("Please do it again!\n"); break; }	
+				if (priority < 1 || priority > 5) printf("\t\tWrong range of number, please remember to edit later!\n");
+				printf("\tStart_date(dd/mm/yyyy): ");
+				if (scanf("%d/%d/%d", &start.d, &start.m, &start.y) != 3) { printf("Please do it again!\n"); break; }
+				printf("\tDue_date(dd/mm/yyyy): ");
+				if (scanf("%d/%d/%d", &due.d, &due.m, &due.y) != 3) { printf("Please do it again!\n"); break; }
+				editTask(head, choice, listLen, task, priority, 0, start, due);
+				resaveToFile(head, file);
+				break;
+
+			case 4:
+				printf("Please enter the number of that task: ");
+
 				scanf("%d", &choice);
 				changeStatus(head, choice);
 				resaveToFile(head, file);
 				break;
 				
-			case 4:
+			case 5:
 				head = mergeList(&head, 1);
 				displayTaskss(head, 1);
 				break;
 				
-			case 5:
+			case 6:
 				head = mergeList(&head, 2);
 				displayTaskss(head, 2);
 				break;
 				
-			case 6:
+			case 7:
 				head = mergeList(&head, 3);
 				displayTaskss(head, 3);
 				break;
