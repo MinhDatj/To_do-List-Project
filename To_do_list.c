@@ -2,10 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
-#ifdef _WIN32
-	#include <io.h>
-	#include <fcntl.h>
-#endif
+#include <time.h>
 
 #define B_BLUE   "\033[1;34m"
 #define B_CYAN   "\033[1;36m"
@@ -17,7 +14,7 @@
 #define VER_LINE "\033[1;36m|\033[0m" 
 
 FILE* fptr;
-const char* file = "./TodoList.txt";
+const char* file = "./TodoList100.txt";
 
 int DaysOfMonth(int m, int y) {
 	switch(m) {
@@ -276,14 +273,8 @@ void splitText(const char* text, int maxLen, int index, int status, int priority
 			first_line = 0;	
 			
 			printf("\033[1;36m|\033[0m" BR_WHITE" %-3d "SET "\033[1;36m|\033[0m %-2s", index, "");
-			#ifdef _WIN32
-				_setmode(_fileno(stdout), _O_U16TEXT);
-				wprintf((status) ? GRN L"\x2713" SET : RED L"\x2715" SET);
-				_setmode(_fileno(stdout), _O_TEXT);
-			#else
-				printf(status ? "\xE2\x9C\x93" : "\xE2\x9C\x95");
-			#endif
-			printf(B_CYAN"%-3s |" "\033[97m  %-37.*s  ", "", cutPos - ptr, text + ptr);
+			printf(status ? "\xE2\x9C\x93" : "\xE2\x9C\x95");
+			printf(B_CYAN"%-3s |" "\033[97m  %-39.*s", "", cutPos - ptr, text + ptr);
 			printf("\033[1;36m|\033[0m \033[38;5;214m%4s%-4d \033[1;36m|\033[0m ", "", priority);
 			printDate(start);
 			printf(" \033[1;36m|\033[0m ");
@@ -322,13 +313,7 @@ void displayTaskss(Task* head, int choice) {
 	while (curr) {
 		if (strlen(curr->detail) < 40) {
 			printf("\033[1;36m|\033[0m" "\033[97m %-3d "SET "\033[1;36m|\033[0m %-2s", index, "");
-			#ifdef _WIN32
-				_setmode(_fileno(stdout), _O_U16TEXT);
-				wprintf((status) ? GRN L"\x2713" SET : RED L"\x2715" SET);
-				_setmode(_fileno(stdout), _O_TEXT);
-			#else
-				printf((curr->status) ? "\xE2\x9C\x93" : "\xE2\x9C\x95");
-			#endif
+			printf((curr->status) ? "\xE2\x9C\x93" : "\xE2\x9C\x95");
 			printf("%-3s "VER_LINE, "");
 			if (strlen(curr->detail) == 39) printf(BR_WHITE"  %-38s", curr->detail);
 			else printf(BR_WHITE"  %-38s ", curr->detail);
@@ -415,6 +400,10 @@ int loadTasksFromFile(Task** head, const char* file_name) {
 	return listLen;
 }
 
+double get_current_time() {
+	return (double)clock() / CLOCKS_PER_SEC;
+}
+
 int testing() {
 	Task* head = NULL;
 	Task* temp;
@@ -424,8 +413,13 @@ int testing() {
 	Date start;		
 	Date due;
 	int choice;
+	double before, after;
 	
-	if(!loadTasksFromFile(&head, file)) printf("There are no tasks yet!\n");
+	// before = get_current_time();
+	choice = loadTasksFromFile(&head, file);
+	// after = get_current_time();
+	printf("running time: %.6f giây\n", after - before);
+	if(!choice) printf("There are no tasks yet!\n");
 	
 	printf("\n********* Main menu *********");
 	printf("\n\tPress:");
@@ -464,7 +458,10 @@ int testing() {
 				printf("\tDue_date(dd/mm/yyyy): ");
 				scanf("%d/%d/%d", &due.d, &due.m, &due.y);
 				temp = newTask(task, priority, 0, start, due);
+				// before = get_current_time();
 				addTask(&head, temp);
+				// after = get_current_time();
+				printf("running time: %.6f giây\n", after - before);
 				saveTaskToFile(temp, file);
 				//Cach 2
 				/*printf("Please enter your task following this form:\n");
@@ -485,7 +482,10 @@ int testing() {
 			case 2:
 				printf("Please enter the number of that task: ");
 				scanf("%d", &choice);
+				// before = get_current_time();
 				deleteTask(&head, choice);
+				// after = get_current_time();
+				printf("running time: %.6f giây\n", after - before);
 				resaveToFile(head, file);
 				break;
 				
@@ -502,7 +502,10 @@ int testing() {
 				if (scanf("%d/%d/%d", &start.d, &start.m, &start.y) != 3) { printf("Please do it again!\n"); break; }
 				printf("\tDue_date(dd/mm/yyyy): ");
 				if (scanf("%d/%d/%d", &due.d, &due.m, &due.y) != 3) { printf("Please do it again!\n"); break; }
+				// before = get_current_time();
 				editTask(head, choice, listLen, task, priority, 0, start, due);
+				// after = get_current_time();
+				printf("running time: %.6f giây\n", after - before);
 				resaveToFile(head, file);
 				break;
 
@@ -510,23 +513,44 @@ int testing() {
 				printf("Please enter the number of that task: ");
 
 				scanf("%d", &choice);
+				// before = get_current_time();
 				changeStatus(head, choice);
+				// after = get_current_time();
+				printf("running time: %.6f giây\n", after - before);
 				resaveToFile(head, file);
 				break;
 				
 			case 5:
+				// before = get_current_time();
 				head = mergeList(&head, 1);
+				// after = get_current_time();
+				printf("merging time: %.6f giây\n", after - before);
+				// before = get_current_time();
 				displayTaskss(head, 1);
+				// after = get_current_time();
+				printf("running time: %.6f giây\n", after - before);
 				break;
 				
 			case 6:
+				// before = get_current_time();
 				head = mergeList(&head, 2);
+				// after = get_current_time();
+				printf("merging time: %.6f giây\n", after - before);
+				// before = get_current_time();
 				displayTaskss(head, 2);
+				// after = get_current_time();
+				printf("running time: %.6f giây\n", after - before);
 				break;
 				
 			case 7:
+				// before = get_current_time();
 				head = mergeList(&head, 3);
+				// after = get_current_time();
+				printf("merging time: %.6f giây\n", after - before);
+				// before = get_current_time();
 				displayTaskss(head, 3);
+				// after = get_current_time();
+				printf("running time: %.6f giây\n", after - before);
 				break;
 				
 			default:
